@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Questionnaire {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  creatorEmail    String
+  scored          Boolean   @default(false) // false = survey, true = quiz
+  shareableToken  String    @unique @default(cuid())
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime  // Simple 24-hour expiration
+
+  questions       Question[]
+  responses       Response[]
+}
+
+model Question {
+  id              String      @id @default(cuid())
+  questionnaireId String
+  type            QuestionType
+  title           String
+  pointsCorrect   Int?        // Only used when questionnaire.scored = true
+  order           Int
+
+  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  options         QuestionOption[]
+  answers         ResponseAnswer[]
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false) // Only meaningful when questionnaire.scored = true
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Response {
+  id              String    @id @default(cuid())
+  questionnaireId String
+  submittedAt     DateTime  @default(now())
+  totalScore      Int?
+
+  questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  answers         ResponseAnswer[]
+}
+
+model ResponseAnswer {
+  id         String @id @default(cuid())
+  responseId String
+  questionId String
+  answerText String
+  isCorrect  Boolean? // Only calculated when questionnaire.scored = true
+
+  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  OPEN_TEXT
+}
