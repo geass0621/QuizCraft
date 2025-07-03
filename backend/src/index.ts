@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { logger } from './middleware/logger.js';
 import { strictLimiter } from './middleware/rateLimiter.js';
+import questionnaireRoutes from './routes/questionnaires.js';
 
 // Load environment variables
 dotenv.config();
@@ -14,17 +15,21 @@ const PORT = process.env.PORT || 3000;
 // Initialize the Express application
 const app  = express();
 
-
 // Middleware for security and CORS
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
 
 // Logger middleware
 app.use(logger);
 
 // Rate limiting middleware to prevent abuse
 app.use(strictLimiter);
+
+// Body parser middleware to handle JSON requests
+app.use(express.json());
+
+// Routes
+app.use('/api', questionnaireRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
