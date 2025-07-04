@@ -47,6 +47,27 @@ export interface Response {
   totalScore?: number; // Optional, calculated later
   answers?: ResponseAnswer[]; // Answers to the questions
 }
+export interface PublicQuestionnaire {
+  id: string;
+  title: string;
+  description?: string;
+  scored: boolean;
+  questions: PublicQuestion[];
+}
+
+export interface PublicQuestion {
+  id: string;
+  type: QuestionType;
+  title: string;
+  order: number;
+  options?: PublicQuestionOption[];
+}
+
+export interface PublicQuestionOption {
+  id: string;
+  text: string;
+  // No isCorrect for security
+}
 
 // API input types
 export interface CreateQuestionOptionInput {
