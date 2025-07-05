@@ -45,6 +45,8 @@ export interface Response {
   questionnaireId: string;
   submittedAt: Date;
   totalScore?: number; // Optional, calculated later
+  submitterName?: string; // Optional user name
+  submitterEmail?: string; // Optional user email
   answers?: ResponseAnswer[]; // Answers to the questions
 }
 export interface PublicQuestionnaire {
@@ -98,4 +100,7 @@ export interface SubmitResponseRequest {
     questionId: string;
     answerText: string;
   }[];
+  // Optional user information
+  submitterName?: string;
+  submitterEmail?: string;
 }

@@ -5,6 +5,7 @@ import cors from 'cors';
 import { logger } from './middleware/logger.js';
 import { strictLimiter } from './middleware/rateLimiter.js';
 import questionnaireRoutes from './routes/questionnaires.js';
+import responseRoutes from './routes/response.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api', questionnaireRoutes);
+app.use('/api', responseRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -1,45 +1,19 @@
 import { Request, Response } from 'express';
-import { prisma } from '../utils/database.js';
-import { CreateQuestionnaireRequest, CreateQuestionInput, CreateQuestionOptionInput, PublicQuestionnaire } from '../types/index.js';
+import { CreateQuestionnaireRequest, PublicQuestionnaire } from '../types/index.js';
 import { SuccessResponse, ErrorResponse } from '../types/responses.js';
-import { removeCorrectAnswers } from '../utils/transformers.js';
+import { QuestionnaireService } from '../services/questionnaireService.js';
+import { ExpiredError, NotFoundError, ValidationError } from '../errors/customErrors.js';
+
+// Initialize the QuestionnaireService instance
+const questionnaireService = new QuestionnaireService();
 
 export const createQuestionnaire = async (req: Request, res: Response): Promise<void> => {
-  try{
+  try {
     // Parse request body
     const requestBody: CreateQuestionnaireRequest = req.body;
 
     // Data operations
-    const questionnaire = await prisma.questionnaire.create({
-      data: {
-        title: requestBody.title,
-        description: requestBody.description,
-        creatorEmail: requestBody.creatorEmail,
-        scored: requestBody.scored,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Default to 24 hours from now
-        questions: {
-          create: requestBody.questions.map((question: CreateQuestionInput) => ({
-            type: question.type,
-            title: question.title,
-            pointsCorrect: question.pointsCorrect,
-            order: question.order,
-            options: question.options ? {
-              create: question.options.map((option: CreateQuestionOptionInput) => ({
-                text: option.text,
-                isCorrect: option.isCorrect
-              }))
-            } : undefined // Handle optional options
-          }))
-        }
-      },
-      include: {
-        questions: {
-          include: {
-            options: true // Include options in the response
-          }
-        }
-      }
-    })
+    const questionnaire = await questionnaireService.createQuestionnaire(requestBody);
 
     // Return success response
     const successResponse: SuccessResponse<any> = {
@@ -56,7 +30,7 @@ export const createQuestionnaire = async (req: Request, res: Response): Promise<
     };
     res.status(201).json(successResponse);
 
-  }catch (error) {
+  } catch (error) {
     // Handle errors
     const errorResponse: ErrorResponse = {
       success: false,
@@ -72,66 +46,12 @@ export const createQuestionnaire = async (req: Request, res: Response): Promise<
 
 
 export const getQuestionnaire = async (req: Request, res: Response): Promise<void> => {
-  try{
+  try {
     // Extract shareable token from request parameters
     const shareableToken = req.params.shareableToken;
 
-    // Validate shareable token
-    if (!shareableToken) {
-      const errorResponse: ErrorResponse = {
-        success: false,
-        message: 'Shareable token is required',
-        error: {
-          code: 'MISSING_TOKEN',
-          details: 'The shareable token must be provided in the request parameters.'
-        }
-      };
-      res.status(400).json(errorResponse);
-      return;
-    }
-
     // Fetch questionnaire from the database
-    const questionnaire = await prisma.questionnaire.findUnique({
-      where: { shareableToken },
-      include: {
-        questions: {
-          include: {
-            options: true // Include options in the response
-          }
-        }
-      }
-    });
-
-    // Check if questionnaire exists
-    if (!questionnaire) {
-      const errorResponse: ErrorResponse = {
-        success: false,
-        message: 'Questionnaire not found',
-        error: {
-          code: 'QUESTIONNAIRE_NOT_FOUND',
-          details: 'No questionnaire found with the provided shareable token.'
-        }
-      };
-      res.status(404).json(errorResponse);
-      return;
-    }
-
-    // Check if the questionnaire is expired
-    if (new Date() > questionnaire.expiresAt) {
-      const errorResponse: ErrorResponse = {
-        success: false,
-        message: 'Questionnaire has expired',
-        error: {
-          code: 'QUESTIONNAIRE_EXPIRED',
-          details: 'This questionnaire is no longer available as it has expired.'
-        }
-      };
-      res.status(410).json(errorResponse);
-      return;
-    }
-
-    // Transform the data to remove isCorrect from options
-    const publicQuestionnaire: PublicQuestionnaire = removeCorrectAnswers(questionnaire);
+    const publicQuestionnaire = await questionnaireService.getQuestionnaire(shareableToken);
 
     // Return success response with transformed data
     const successResponse: SuccessResponse<PublicQuestionnaire> = {
@@ -140,11 +60,48 @@ export const getQuestionnaire = async (req: Request, res: Response): Promise<voi
       data: publicQuestionnaire
     };
     res.status(200).json(successResponse);
-    
 
-
-  }catch (error) {
+  } catch (error) {
     // Handle errors
+    if (error instanceof NotFoundError) {
+      const notFoundResponse: ErrorResponse = {
+        success: false,
+        message: 'Questionnaire not found',
+        error: {
+          code: 'QUESTIONNAIRE_NOT_FOUND',
+          details: error.message
+        }
+      };
+      res.status(404).json(notFoundResponse);
+      return;
+    }
+
+    if (error instanceof ExpiredError) {
+      const expiredResponse: ErrorResponse = {
+        success: false,
+        message: 'Questionnaire has expired',
+        error: {
+          code: 'QUESTIONNAIRE_EXPIRED',
+          details: error.message
+        }
+      };
+      res.status(410).json(expiredResponse);
+      return;
+    }
+
+    if (error instanceof ValidationError) {
+      const validationResponse: ErrorResponse = {
+        success: false,
+        message: 'Validation error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          details: error.message
+        }
+      };
+      res.status(400).json(validationResponse);
+      return;
+    }
+
     const errorResponse: ErrorResponse = {
       success: false,
       message: 'Failed to retrieve questionnaire',
