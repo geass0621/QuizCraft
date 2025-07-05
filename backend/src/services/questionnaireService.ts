@@ -2,15 +2,28 @@ import { prisma } from "../utils/database.js";
 import { CreateQuestionnaireRequest, PublicQuestionnaire } from "../types/index.js";
 import { removeCorrectAnswers } from "../utils/transformers.js";
 import { ExpiredError, NotFoundError, ValidationError } from "../errors/customErrors.js";
+import { Prisma } from "@prisma/client";
+
+// Define the type for the questionnaire with answers
+type QuestionnaireWithAnswers = Prisma.QuestionnaireGetPayload<{
+  include: {
+    questions: {
+      include: {
+        options: true;
+      };
+    };
+  };
+}>;
 
 export class QuestionnaireService {
+
 
   /**
    * Creates a new questionnaire with the provided data.
    * @param data - The data for the new questionnaire.
    * @returns The created questionnaire object.
    */
-  async createQuestionnaire(data: CreateQuestionnaireRequest) {
+  async createQuestionnaire(data: CreateQuestionnaireRequest): Promise<QuestionnaireWithAnswers> {
     try {
       // Data operations
       const questionnaire = await prisma.questionnaire.create({
@@ -58,7 +71,7 @@ export class QuestionnaireService {
    * @param shareableToken - The shareable token of the questionnaire.
    * @returns The public questionnaire object without correct answers.
    */
-  async getQuestionnaire(shareableToken: string) {
+  async getQuestionnaire(shareableToken: string): Promise<PublicQuestionnaire> {
     try {
       // Validate shareable token
       if (!shareableToken) {
