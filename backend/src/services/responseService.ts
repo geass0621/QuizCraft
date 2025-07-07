@@ -3,6 +3,10 @@ import { SubmitResponseRequest } from '../types/index.js';
 import { prisma } from '../utils/database.js';
 import { Prisma } from '@prisma/client';
 
+/**
+ * ResponseService handles the business logic for questionnaire responses.
+ * It includes methods for submitting responses, calculating scores,
+ */
 
 // Define the type for the questionnaire with answers
 type QuestionnaireWithAnswers = Prisma.QuestionnaireGetPayload<{
@@ -17,6 +21,11 @@ type QuestionnaireWithAnswers = Prisma.QuestionnaireGetPayload<{
 
 export class ResponseService {
 
+  /**
+   * Retrieves a questionnaire with its answers based on the shareable token.
+   * @param shareableToken - The unique token for the questionnaire.
+   * @returns The questionnaire with its questions and options.
+   */
   private async getQuestionnaireWithAnswers(shareableToken: string): Promise<QuestionnaireWithAnswers> {
     // Fetch the questionnaire with answers for internal use
     try {
@@ -60,6 +69,12 @@ export class ResponseService {
     }
   };
 
+  /**
+   * Calculates the total score based on the answers provided.
+   * @param answers - The answers submitted by the user.
+   * @param questionnaire - The questionnaire containing questions and options.
+   * @returns The total score calculated from the answers.
+   */
   private calculateTotalScore(answers: any[], questionnaire: QuestionnaireWithAnswers): number {
     let totalScore = 0;
 
