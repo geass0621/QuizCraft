@@ -1,10 +1,10 @@
+import { RouterProvider } from "react-router-dom"
+import router from "./routes/appRoutes.tsx"
 
 function App() {
 
   return (
-    <>
-      <h1 className="text-6xl">QuizCraft</h1>
-    </>
+    <RouterProvider router={router} />
   )
 }
 
